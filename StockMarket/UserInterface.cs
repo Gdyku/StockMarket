@@ -12,10 +12,10 @@ namespace StockMarket
     {
 
         StockExTools stockTool = new StockExTools();
-        UserTools userTool = new UserTools();
+        TextForUI textObj = new TextForUI();
         public void GetOfferHistory(string path, DateTime start, DateTime end)
         {
-            var list = stockTool.SendHistoryListInJson(path);
+            var list = stockTool.SendListInJson(path);
 
             foreach (var element in list)
             {
@@ -27,24 +27,20 @@ namespace StockMarket
         }
 
 
-        public void SetWatcher(string path, User user, string userFile)
+        public void SetWatcher(string path, StreamWriter writer)
         {
             Console.WriteLine("Set a maximal value for watcher");
             int value = Convert.ToInt32(Console.ReadLine());
 
-            var list = stockTool.SendHistoryListInJson(path);
-            foreach(var element in list)
-            {
-                if(element.Value <= value)
-                {
-                    userTool.BuyOffer(user, element);
-                }
-            }
-        }
+            var list = stockTool.SendListInJson(path);
+            var offersToBuyList = stockTool.UserJsonSerializer(writer, list, value);
 
-        public void GetTransactions(string path)
+            stockTool.SaveOffer(writer, offersToBuyList);
+        }      
+
+        public void GetTransactions(string userFile)
         {
-            var list = stockTool.SendHistoryListInJson(path);
+            var list = stockTool.SendListInJson(userFile);
 
             foreach(var element in list)
             {
@@ -52,9 +48,9 @@ namespace StockMarket
             }
         }
 
-        public void Run(string path, User user)
+        public void Run(string path, string userFile)
         {
-            var list = stockTool.SendHistoryListInJson(path);
+            var list = stockTool.SendListInJson(path);
             foreach(var element in list)
             {
                 Console.WriteLine($"{element.Instrument}, {element.Value}, {element.Date.ToShortDateString()}");
@@ -62,17 +58,11 @@ namespace StockMarket
 
             Console.WriteLine("Do you want to check which stock have you bought?");
             Console.WriteLine("Press Y for yes or N for no");
-            char sign = Convert.ToChar(Console.ReadLine().ToUpper());
-            if(sign == 'Y')
+            bool answer = textObj.YesOrNoAnswer();
+            if(answer == true)
             {
-                userTool.ShowUserStocks(user);
-            } else if( sign == 'N')
-            {
-
-            } else
-            {
-
-            }
-        }
+                GetTransactions(userFile);
+            } 
+        }   
     }
 }

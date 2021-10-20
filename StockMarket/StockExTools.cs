@@ -26,22 +26,30 @@ namespace StockMarket
                 instruments.Add(offer); 
             }
 
+
             return instruments;
         }
 
         //metoda serializacji danych do obiektu Json a następnie zapisuje go w pliku 
-        public void SaveOffer(StreamWriter writer, List<StockOffer> list)
+        public void SaveOffer(StreamWriter writer, List<List<StockOffer>> list)
         {
             string json = JsonConvert.SerializeObject(list.ToArray());
             writer.WriteLine(json);
         }
 
         //Ta metoda sczytuje dane z pliku a następnie deserializuje je 
-        public List<StockOffer> SendHistoryListInJson(string path)
+        public List<StockOffer> SendListInJson(string path)
         {
             var jsonText = File.ReadAllText(path);
-            var list = JsonConvert.DeserializeObject<List<StockOffer>>(jsonText);
-            list.OrderByDescending(e => e.Date);
+            var list = Deserializing(jsonText);
+
+            return list;
+        }
+
+        private List<StockOffer> Deserializing(string jsonText)
+        {
+            var listOfLists = JsonConvert.DeserializeObject<List<List<StockOffer>>>(jsonText);
+            var list = listOfLists.SelectMany(e => e).Distinct().OrderByDescending(e => e.Date).ToList();
 
             return list;
         }
@@ -55,19 +63,41 @@ namespace StockMarket
             return start.AddDays(random.Next(range));
         }
 
-        private void FilteringResults(string path)
+        public void FilteringResults(string path)
         {
             Console.WriteLine("Type the company for which you want to show results");
-            string company = Console.ReadLine();
+            string company = Console.ReadLine().ToUpper();
 
-            var list = SendHistoryListInJson(path);
+            var list = SendListInJson(path);
             foreach(var element in list)
             {
                 if(element.Instrument == company)
                 {
-                    Console.WriteLine($"{element.Instrument}, {element.Value}, {element.Date}");
+                    Console.WriteLine($"{element.Instrument}, {element.Value}, {element.Date.ToShortDateString()}");
                 }
             }
+        }
+
+        public List<List<StockOffer>> UserJsonSerializer(StreamWriter writer, List<StockOffer> list, int watcherValue)
+        {
+            var listOfLists = new List<List<StockOffer>>();
+            var offersToBuyList = new List<StockOffer>();         
+            foreach (var element in list)
+            {
+                if (element.Value <= watcherValue)
+                offersToBuyList.Add(element);
+            }            
+            listOfLists.Add(offersToBuyList);
+
+            //stockTool.SaveOffer(writer, listOfLists);
+
+            return listOfLists;
+        }
+
+        public void ClearFile(StreamWriter writer)
+        {
+            string clear = "";
+            writer.WriteLine(clear);
         }
     }
 }
